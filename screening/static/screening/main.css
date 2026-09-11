@@ -1,14 +1,14 @@
 :root {
-  --bg: #0d1420;
-  --panel: #16202f;
-  --panel2: #1c2940;
-  --line: #2b3b55;
-  --text: #dbe6f5;
-  --muted: #8ea3bf;
-  --accent: #37c8ab;
-  --warn: #f5b83d;
-  --high: #ef5350;
-  --ok: #66bb6a;
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --panel2: #eef2f8;
+  --line: #d5deec;
+  --text: #1a2637;
+  --muted: #5a6b82;
+  --accent: #1ea88c;
+  --warn: #d97706;
+  --high: #dc2626;
+  --ok: #16a34a;
 }
 * { box-sizing: border-box; }
 body {
@@ -18,8 +18,9 @@ body {
 a { color: var(--accent); text-decoration: none; }
 header.top {
   display: flex; align-items: center; gap: 18px;
-  background: linear-gradient(90deg, #0a1120, #14243c);
+  background: linear-gradient(90deg, #ffffff, #eaf3ef);
   border-bottom: 1px solid var(--line); padding: 12px 26px;
+  box-shadow: 0 1px 2px rgba(15, 30, 60, 0.04);
 }
 header.top .logo { font-size: 20px; font-weight: 700; letter-spacing: 2px; }
 header.top .logo span { color: var(--accent); }
@@ -48,7 +49,7 @@ h2 { font-size: 16px; margin: 26px 0 10px; color: var(--muted);
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
          gap: 14px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-        padding: 14px 16px; }
+        padding: 14px 16px; box-shadow: 0 1px 3px rgba(15, 30, 60, 0.05); }
 .card .num { font-size: 30px; font-weight: 700; }
 .card .lbl { color: var(--muted); font-size: 12px; text-transform: uppercase;
              letter-spacing: 1px; }
@@ -71,7 +72,7 @@ tr:last-child td { border-bottom: none; }
 .badge.fail-critical { background: rgba(239,83,80,.18); color: var(--high); }
 .badge.fail-warning { background: rgba(245,184,61,.15); color: var(--warn); }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-         padding: 18px; margin-bottom: 18px; }
+         padding: 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(15, 30, 60, 0.05); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
 form.up input[type=file], form.up select { width: 100%; margin: 6px 0 14px;
@@ -79,7 +80,7 @@ form.up input[type=file], form.up select { width: 100%; margin: 6px 0 14px;
   border-radius: 8px; padding: 9px; }
 input, select, textarea { background: var(--panel2); color: var(--text);
   border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
-button, .btn { background: var(--accent); color: #06251f; border: none;
+button, .btn { background: var(--accent); color: #ffffff; border: none;
   border-radius: 8px; padding: 10px 22px; font-weight: 700; cursor: pointer;
   font-size: 14px; }
 button.ghost { background: transparent; color: var(--muted);
@@ -144,7 +145,7 @@ footer { color: var(--muted); text-align: center; padding: 20px; font-size: 12px
 
 .camera-box { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
   padding: 14px; margin-bottom: 14px; }
-.camera-feed { position: relative; width: 100%; aspect-ratio: 4/3; background: #0a0f18;
+.camera-feed { position: relative; width: 100%; aspect-ratio: 4/3; background: #dbe4ef;
   border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
 .camera-feed img { width: 100%; height: 100%; object-fit: cover; display: none; }
 .camera-overlay { position: absolute; inset: 0; display: flex; flex-direction: column;

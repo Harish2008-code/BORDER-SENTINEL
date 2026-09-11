@@ -7,13 +7,13 @@
 <div class="panel gauge">
   {% with s=record.risk_score %}
   <svg width="110" height="110" viewBox="0 0 110 110">
-    <circle cx="55" cy="55" r="46" fill="none" stroke="#22314a" stroke-width="12"/>
+    <circle cx="55" cy="55" r="46" fill="none" stroke="#d5deec" stroke-width="12"/>
     <circle cx="55" cy="55" r="46" fill="none"
       stroke="{% if record.risk_level == 'HIGH' %}#ef5350{% elif record.risk_level == 'MEDIUM' %}#f5b83d{% else %}#66bb6a{% endif %}"
       stroke-width="12" stroke-linecap="round"
       stroke-dasharray="{{ record.risk_score }} 100" pathLength="100"
       transform="rotate(-90 55 55)"/>
-    <text x="55" y="63" text-anchor="middle" fill="#dbe6f5" font-size="26" font-weight="800">{{ s }}</text>
+    <text x="55" y="63" text-anchor="middle" fill="#1a2637" font-size="26" font-weight="800">{{ s }}</text>
   </svg>
   {% endwith %}
   <div>
@@ -47,13 +47,13 @@
     <span class="k">Email</span>
     <span>
       {% if contact.gmail_id %}
-        <a href="mailto:{{ contact.gmail_id }}" style="color:#4fc3f7">{{ contact.gmail_id }}</a>
+        <a href="mailto:{{ contact.gmail_id }}" style="color:#0d6efd">{{ contact.gmail_id }}</a>
       {% else %}<span class="muted">not on file</span>{% endif %}
     </span>
     <span class="k">Phone</span>
     <span>
       {% if contact.phone_number %}
-        <a href="tel:{{ contact.phone_number }}" style="color:#4fc3f7">{{ contact.phone_number }}</a>
+        <a href="tel:{{ contact.phone_number }}" style="color:#0d6efd">{{ contact.phone_number }}</a>
       {% else %}<span class="muted">not on file</span>{% endif %}
     </span>
     <span class="k">Source</span><span class="muted">{{ contact.source_table|default:"—" }} record (DB)</span>
@@ -106,7 +106,7 @@
     <h2>Module 4 — Face verification</h2>
     <div class="panel">
       {% if face_comparisons.doc_vs_live %}
-        <h4 style="margin:0 0 .4rem;color:#90caf9">Document vs Live Capture</h4>
+        <h4 style="margin:0 0 .4rem;color:#1565c0">Document vs Live Capture</h4>
         {% with f=face_comparisons.doc_vs_live %}
         <div class="detrow"><span>Backend</span><span>{{ f.backend }}</span></div>
         <div class="detrow"><span>Faces (doc / live)</span><span>{{ f.doc_faces }} / {{ f.live_faces }}</span></div>
@@ -130,8 +130,8 @@
       {% endif %}
 
       {% if face_comparisons.doc_vs_db %}
-      <hr style="border-color:#2a3a52;margin:.8rem 0">
-      <h4 style="margin:0 0 .4rem;color:#ce93d8">Document Photo vs DB Photo</h4>
+      <hr style="border-color:#d5deec;margin:.8rem 0">
+      <h4 style="margin:0 0 .4rem;color:#7b1fa2">Document Photo vs DB Photo</h4>
       {% with f=face_comparisons.doc_vs_db %}
         {% if f.similarity != None %}
         <div class="detrow"><span>Similarity (thr {{ f.threshold }})</span>
@@ -142,8 +142,8 @@
       {% endif %}
 
       {% if face_comparisons.live_vs_db %}
-      <hr style="border-color:#2a3a52;margin:.8rem 0">
-      <h4 style="margin:0 0 .4rem;color:#80cbc4">Live Capture vs DB Photo</h4>
+      <hr style="border-color:#d5deec;margin:.8rem 0">
+      <h4 style="margin:0 0 .4rem;color:#00695c">Live Capture vs DB Photo</h4>
       {% with f=face_comparisons.live_vs_db %}
         {% if f.similarity != None %}
         <div class="detrow"><span>Similarity (thr {{ f.threshold }})</span>
