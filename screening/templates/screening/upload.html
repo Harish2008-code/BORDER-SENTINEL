@@ -1,0 +1,212 @@
+{% extends "screening/base.html" %}
+{% block content %}
+<h1>Screen a travel document</h1>
+<div class="grid2">
+  <form method="post" enctype="multipart/form-data" class="up panel" id="screenForm">
+    {% csrf_token %}
+    <label>Document image (passport / visa / ID / licence / permit)</label>
+    <div class="drop-zone" id="dropDoc" tabindex="0">
+      <input type="file" name="document" accept="image/*" required id="inputDoc" class="drop-input">
+      <div class="drop-content">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4m0 0L8 8m4-4l4 4"/><path d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
+        <span class="drop-label">Drag &amp; drop or <em>browse</em></span>
+        <small class="drop-hint">JPG, PNG or TIFF — max 10 MB</small>
+      </div>
+      <div class="drop-preview" id="previewDoc" hidden>
+        <img id="thumbDoc" alt="preview">
+        <button type="button" class="drop-clear" onclick="clearFile('Doc')">&times;</button>
+        <span class="drop-name" id="nameDoc"></span>
+      </div>
+    </div>
+
+    <label>Live capture of the traveller (optional — enables face verification)</label>
+    <div class="live-toggle">
+      <button type="button" class="toggle-btn active" id="btnUpload" onclick="switchMode('upload')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L8 8m4-4l4 4"/><path d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
+        Upload photo
+      </button>
+      <button type="button" class="toggle-btn" id="btnCamera" onclick="switchMode('camera')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="3"/><path d="M5 7h2l2-2h6l2 2h2a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z"/></svg>
+        Live capture
+      </button>
+    </div>
+
+    <!-- Upload mode -->
+    <div id="modeUpload">
+      <div class="drop-zone" id="dropLive" tabindex="0">
+        <input type="file" name="live_photo" accept="image/*" id="inputLive" class="drop-input">
+        <div class="drop-content">
+          <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/></svg>
+          <span class="drop-label">Drag &amp; drop or <em>browse</em></span>
+          <small class="drop-hint">Optional — upload a photo for biometric match</small>
+        </div>
+        <div class="drop-preview" id="previewLive" hidden>
+          <img id="thumbLive" alt="preview">
+          <button type="button" class="drop-clear" onclick="clearFile('Live')">&times;</button>
+          <span class="drop-name" id="nameLive"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Camera mode -->
+    <div id="modeCamera" hidden>
+      <div class="camera-box">
+        <div class="camera-feed" id="cameraFeed">
+          <img id="cameraStream" alt="camera feed">
+          <div class="camera-overlay" id="cameraOverlay">
+            <svg class="camera-icon-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="13" r="3"/><path d="M5 7h2l2-2h6l2 2h2a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z"/></svg>
+            <span>Click "Start camera" to begin</span>
+          </div>
+        </div>
+        <div class="camera-controls">
+          <button type="button" class="btn-cam" id="btnStartCam" onclick="startCamera()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            Start camera
+          </button>
+          <button type="button" class="btn-cam btn-capture" id="btnCapture" onclick="captureFrame()" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+            Capture
+          </button>
+          <button type="button" class="btn-cam btn-stop" id="btnStopCam" onclick="stopCamera()" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+            Stop
+          </button>
+        </div>
+        <div id="capturedResult" hidden>
+          <div class="captured-row">
+            <img id="capturedThumb" alt="captured">
+            <div>
+              <span class="captured-label">Photo captured</span>
+              <button type="button" class="drop-clear" onclick="clearCapture()">&times; Retake</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" name="live_photo_path" id="capturedPath">
+    </div>
+
+    <label>Document type (auto-detect if blank)</label>
+    <select name="doc_type">
+      <option value="">Auto-detect</option>
+      {% for t in doc_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+    </select>
+    <button type="submit">Run AI screening</button>
+  </form>
+  <div class="panel">
+    <h2 style="margin-top:0">What the engine does</h2>
+    <div class="detrow"><span>Module 1 — OCR extraction</span><small class="muted">fields + MRZ, ICAO checksums</small></div>
+    <div class="detrow"><span>Module 2 — Validation</span><small class="muted">format rules, dates, watchlists</small></div>
+    <div class="detrow"><span>Module 3 — Tampering detection</span><small class="muted">ELA, noise, blockiness, splice, metadata</small></div>
+    <div class="detrow"><span>Module 4 — Face verification</span><small class="muted">YuNet + SFace biometric match</small></div>
+    <div class="detrow"><span>Risk engine</span><small class="muted">weighted 0–100 score + recommendation</small></div>
+    <p><small class="muted">Try the demo corpus in <code>demo_assets/generated/</code> after running
+      <code>python manage.py seed_demo</code>.</small></p>
+  </div>
+</div>
+
+<script>
+/* ── Drop-zone file upload ── */
+function setupDrop(suffix) {
+  var zone = document.getElementById('drop' + suffix);
+  var input = document.getElementById('input' + suffix);
+  zone.addEventListener('click', function() { input.click(); });
+  zone.addEventListener('keydown', function(e) { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); input.click(); } });
+  ['dragenter','dragover'].forEach(function(ev) {
+    zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
+  });
+  ['dragleave','drop'].forEach(function(ev) {
+    zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.remove('drag-over'); });
+  });
+  zone.addEventListener('drop', function(e) {
+    if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; showPreview(suffix); }
+  });
+  input.addEventListener('change', function() { showPreview(suffix); });
+}
+function showPreview(suffix) {
+  var input = document.getElementById('input' + suffix);
+  var preview = document.getElementById('preview' + suffix);
+  var thumb = document.getElementById('thumb' + suffix);
+  var nameEl = document.getElementById('name' + suffix);
+  var content = document.getElementById('drop' + suffix).querySelector('.drop-content');
+  if (input.files && input.files[0]) {
+    nameEl.textContent = input.files[0].name;
+    var reader = new FileReader();
+    reader.onload = function(e) { thumb.src = e.target.result; };
+    reader.readAsDataURL(input.files[0]);
+    content.hidden = true;
+    preview.hidden = false;
+  }
+}
+function clearFile(suffix) {
+  document.getElementById('input' + suffix).value = '';
+  document.getElementById('preview' + suffix).hidden = true;
+  document.getElementById('drop' + suffix).querySelector('.drop-content').hidden = false;
+}
+setupDrop('Doc');
+setupDrop('Live');
+
+/* ── Mode toggle ── */
+function switchMode(mode) {
+  var isCamera = mode === 'camera';
+  document.getElementById('modeUpload').hidden = isCamera;
+  document.getElementById('modeCamera').hidden = !isCamera;
+  document.getElementById('btnUpload').classList.toggle('active', !isCamera);
+  document.getElementById('btnCamera').classList.toggle('active', isCamera);
+  if (!isCamera) stopCamera();
+}
+
+/* ── OpenCV camera ── */
+var streaming = false;
+var streamInterval = null;
+
+function startCamera() {
+  document.getElementById('cameraOverlay').hidden = true;
+  document.getElementById('btnStartCam').disabled = true;
+  document.getElementById('btnCapture').disabled = false;
+  document.getElementById('btnStopCam').disabled = false;
+  var img = document.getElementById('cameraStream');
+  img.src = '/camera/stream/?' + Date.now();
+  img.style.display = 'block';
+  streaming = true;
+}
+
+function stopCamera() {
+  streaming = false;
+  var img = document.getElementById('cameraStream');
+  img.src = '';
+  img.style.display = 'none';
+  document.getElementById('cameraOverlay').hidden = false;
+  document.getElementById('btnStartCam').disabled = false;
+  document.getElementById('btnCapture').disabled = true;
+  document.getElementById('btnStopCam').disabled = true;
+}
+
+function captureFrame() {
+  document.getElementById('btnCapture').disabled = true;
+  document.getElementById('btnCapture').textContent = 'Capturing…';
+  fetch('/camera/capture/', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        document.getElementById('capturedPath').value = data.path;
+        document.getElementById('capturedThumb').src = '/media/' + data.path;
+        document.getElementById('capturedResult').hidden = false;
+        stopCamera();
+      } else {
+        alert('Capture failed: ' + data.error);
+      }
+    })
+    .catch(function(err) { alert('Capture error: ' + err); })
+    .finally(function() {
+      document.getElementById('btnCapture').disabled = false;
+      document.getElementById('btnCapture').innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg> Capture';
+    });
+}
+
+function clearCapture() {
+  document.getElementById('capturedPath').value = '';
+  document.getElementById('capturedResult').hidden = true;
+}
+</script>
+{% endblock %}

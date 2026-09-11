@@ -1,0 +1,175 @@
+{% extends "screening/base.html" %}
+{% load static %}
+{% get_media_prefix as MEDIA_URL %}
+{% block content %}
+<h1>Screening #{{ record.pk }} — {{ record.get_doc_type_display }}</h1>
+
+<div class="panel gauge">
+  {% with s=record.risk_score %}
+  <svg width="110" height="110" viewBox="0 0 110 110">
+    <circle cx="55" cy="55" r="46" fill="none" stroke="#22314a" stroke-width="12"/>
+    <circle cx="55" cy="55" r="46" fill="none"
+      stroke="{% if record.risk_level == 'HIGH' %}#ef5350{% elif record.risk_level == 'MEDIUM' %}#f5b83d{% else %}#66bb6a{% endif %}"
+      stroke-width="12" stroke-linecap="round"
+      stroke-dasharray="{{ record.risk_score }} 100" pathLength="100"
+      transform="rotate(-90 55 55)"/>
+    <text x="55" y="63" text-anchor="middle" fill="#dbe6f5" font-size="26" font-weight="800">{{ s }}</text>
+  </svg>
+  {% endwith %}
+  <div>
+    <div class="big" style="color:{% if record.risk_level == 'HIGH' %}var(--high){% elif record.risk_level == 'MEDIUM' %}var(--warn){% else %}var(--ok){% endif %}">
+      {{ record.risk_level }} RISK</div>
+    <div>{{ record.recommendation }}</div>
+    <small class="muted">processed in {{ record.processing_ms }} ms · OCR confidence {{ record.ocr_confidence }}</small>
+  </div>
+  <div style="margin-left:auto">
+    <form method="post" style="display:flex;gap:8px;align-items:center">
+      {% csrf_token %}
+      <select name="status">
+        {% for v, l in record.STATUSES %}<option value="{{ v }}" {% if v == record.status %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+      <input name="review_note" placeholder="Reviewer note" value="{{ record.review_note }}">
+      <button>Update</button>
+    </form>
+  </div>
+</div>
+
+{% with contact=record.fields_json.contact %}
+{% if contact and contact.verified %}
+<div class="panel" style="border-left:4px solid var(--accent);margin-bottom:1.2rem">
+  <h3 style="margin:0 0 .6rem;color:var(--accent)">
+    📇 Contact Information
+    <small class="muted" style="font-weight:400;font-size:12px">
+      &mdash; on file for analyst follow-up</small>
+  </h3>
+  <div class="kv" style="gap:8px 16px">
+    <span class="k">Holder</span><span>{{ record.holder_name|default:"—" }}</span>
+    <span class="k">Email</span>
+    <span>
+      {% if contact.gmail_id %}
+        <a href="mailto:{{ contact.gmail_id }}" style="color:#4fc3f7">{{ contact.gmail_id }}</a>
+      {% else %}<span class="muted">not on file</span>{% endif %}
+    </span>
+    <span class="k">Phone</span>
+    <span>
+      {% if contact.phone_number %}
+        <a href="tel:{{ contact.phone_number }}" style="color:#4fc3f7">{{ contact.phone_number }}</a>
+      {% else %}<span class="muted">not on file</span>{% endif %}
+    </span>
+    <span class="k">Source</span><span class="muted">{{ contact.source_table|default:"—" }} record (DB)</span>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="grid2">
+  <div>
+    <h2>Document &amp; analyst overlay</h2>
+    <div class="panel"><img class="doc" src="/media/{{ record.annotated }}" alt="annotated"></div>
+    <div class="panel"><img class="doc" src="{{ record.original.url }}" alt="original"></div>
+    {% if record.live_photo %}<div class="panel"><img class="doc" src="{{ record.live_photo.url }}" alt="live"></div>{% endif %}
+  </div>
+  <div>
+    <h2>Module 1 — Extracted data</h2>
+    <div class="panel kv">
+      {% for k, v in record.fields_json.values.items %}
+        <span class="k">{{ k }}</span><span>{{ v }}</span>
+      {% empty %}<span class="k">No fields extracted</span><span>—</span>{% endfor %}
+      {% if record.fields_json.mrz %}
+        <span class="k">MRZ</span><span class="mono">{{ record.fields_json.mrz.lines.0 }}<br>{{ record.fields_json.mrz.lines.1 }}</span>
+        <span class="k">MRZ checksums</span><span>{{ record.fields_json.mrz.checks }}</span>
+        {% if record.fields_json.mrz.ocr_fixes %}<span class="k">OCR repairs</span><span>{{ record.fields_json.mrz.ocr_fixes }}</span>{% endif %}
+      {% endif %}
+    </div>
+
+    <h2>Module 2 — Validation ({{ record.checks_json|length }} rules)</h2>
+    <div class="panel">
+      {% for c in record.checks_json %}
+      <div class="detrow">
+        <span>{% if c.passed %}<span class="badge pass">PASS</span>{% elif c.severity == 'critical' %}<span class="badge fail-critical">FAIL</span>{% else %}<span class="badge fail-warning">WARN</span>{% endif %}
+        {{ c.label|default:c.id }}</span>
+        <small class="muted">{{ c.detail }}</small>
+      </div>
+      {% endfor %}
+    </div>
+
+    <h2>Module 3 — Tampering forensics (score {{ record.tamper_json.score }})</h2>
+    <div class="panel">
+      {% for d in record.tamper_json.detectors %}
+      <div class="detrow"><span>{{ d.name }}</span>
+        <span class="score" style="color:{% if d.score > 35 %}var(--high){% elif d.score > 15 %}var(--warn){% else %}var(--ok){% endif %}">{{ d.score }}</span></div>
+      <div class="bar"><i style="width:{{ d.score }}%;background:{% if d.score > 35 %}var(--high){% elif d.score > 15 %}var(--warn){% else %}var(--ok){% endif %}"></i></div>
+      <small class="muted">{{ d.detail }}</small>
+      {% endfor %}
+    </div>
+
+    <h2>Module 4 — Face verification</h2>
+    <div class="panel">
+      {% if face_comparisons.doc_vs_live %}
+        <h4 style="margin:0 0 .4rem;color:#90caf9">Document vs Live Capture</h4>
+        {% with f=face_comparisons.doc_vs_live %}
+        <div class="detrow"><span>Backend</span><span>{{ f.backend }}</span></div>
+        <div class="detrow"><span>Faces (doc / live)</span><span>{{ f.doc_faces }} / {{ f.live_faces }}</span></div>
+        {% if f.similarity != None %}
+        <div class="detrow"><span>Similarity (thr {{ f.threshold }})</span>
+          <span class="score" style="color:{% if f.matched %}var(--ok){% else %}var(--high){% endif %}">{{ f.similarity }}</span></div>
+        <div class="detrow"><span>Verdict</span><span>{% if f.matched %}MATCH{% else %}MISMATCH{% endif %}</span></div>
+        {% else %}<div class="detrow"><span>Detail</span><span>{{ f.detail }}</span></div>{% endif %}
+        {% endwith %}
+      {% elif record.face_json.similarity != None or record.face_json.matched != None %}
+        {# Legacy single-result format #}
+        <div class="detrow"><span>Backend</span><span>{{ record.face_json.backend }}</span></div>
+        <div class="detrow"><span>Faces on document / live</span><span>{{ record.face_json.doc_faces }} / {{ record.face_json.live_faces }}</span></div>
+        {% if record.face_json.similarity != None %}
+        <div class="detrow"><span>Similarity (threshold {{ record.face_json.threshold }})</span>
+          <span class="score" style="color:{% if record.face_json.matched %}var(--ok){% else %}var(--high){% endif %}">{{ record.face_json.similarity }}</span></div>
+        <div class="detrow"><span>Verdict</span><span>{% if record.face_json.matched %}MATCH — same person{% else %}MISMATCH — possible impersonation{% endif %}</span></div>
+        {% else %}<div class="detrow"><span>Detail</span><span>{{ record.face_json.detail }}</span></div>{% endif %}
+      {% else %}
+        <small class="muted">No live capture submitted — biometric check skipped (uncertainty penalty applied).</small>
+      {% endif %}
+
+      {% if face_comparisons.doc_vs_db %}
+      <hr style="border-color:#2a3a52;margin:.8rem 0">
+      <h4 style="margin:0 0 .4rem;color:#ce93d8">Document Photo vs DB Photo</h4>
+      {% with f=face_comparisons.doc_vs_db %}
+        {% if f.similarity != None %}
+        <div class="detrow"><span>Similarity (thr {{ f.threshold }})</span>
+          <span class="score" style="color:{% if f.matched %}var(--ok){% else %}var(--high){% endif %}">{{ f.similarity }}</span></div>
+        <div class="detrow"><span>Verdict</span><span>{% if f.matched %}MATCH — document matches DB record{% else %}MISMATCH — document photo differs from DB{% endif %}</span></div>
+        {% else %}<div class="detrow"><span>Detail</span><span>{{ f.detail }}</span></div>{% endif %}
+      {% endwith %}
+      {% endif %}
+
+      {% if face_comparisons.live_vs_db %}
+      <hr style="border-color:#2a3a52;margin:.8rem 0">
+      <h4 style="margin:0 0 .4rem;color:#80cbc4">Live Capture vs DB Photo</h4>
+      {% with f=face_comparisons.live_vs_db %}
+        {% if f.similarity != None %}
+        <div class="detrow"><span>Similarity (thr {{ f.threshold }})</span>
+          <span class="score" style="color:{% if f.matched %}var(--ok){% else %}var(--high){% endif %}">{{ f.similarity }}</span></div>
+        <div class="detrow"><span>Verdict</span><span>{% if f.matched %}MATCH — live person matches DB{% else %}MISMATCH — live person differs from DB{% endif %}</span></div>
+        {% else %}<div class="detrow"><span>Detail</span><span>{{ f.detail }}</span></div>{% endif %}
+      {% endwith %}
+      {% endif %}
+    </div>
+
+    <h2>Risk breakdown</h2>
+    <div class="panel">
+      {% for b in record.scoring_json.breakdown %}
+      <div class="detrow"><span>{{ b.component }} <small class="muted">(w={{ b.weight }})</small></span>
+        <span>+{{ b.contribution }} <small class="muted">{{ b.value }}</small></span></div>
+      {% endfor %}
+    </div>
+
+    <h2>Audit trail {% if chain_ok %}<span class="badge pass">chain valid</span>{% else %}<span class="badge fail-critical">chain broken</span>{% endif %}</h2>
+    <div class="panel">
+      {% for e in audit %}
+      <div class="detrow"><span>#{{ e.seq }} {{ e.action }} <small class="muted">{{ e.at|date:"d M H:i:s" }}</small></span>
+        <small class="mono muted">{{ e.hash|slice:":16" }}…</small></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

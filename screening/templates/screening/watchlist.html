@@ -1,0 +1,164 @@
+{% extends "screening/base.html" %}
+{% block content %}
+<h1>Security databases</h1>
+<div class="grid2">
+  <div>
+    <h2>Person watchlist</h2>
+    <div class="panel">
+      <form method="post" enctype="multipart/form-data"
+            style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <input name="full_name" placeholder="FULL NAME" required>
+        <input name="doc_number" placeholder="Doc number (optional)">
+        <select name="doc_type">
+          <option value="">Document type…</option>
+          <option value="passport">Passport</option>
+          <option value="visa">Visa</option>
+          <option value="id_card">National ID / Aadhaar</option>
+          <option value="driving_license">Driving Licence</option>
+          <option value="permit">Permit</option>
+          <option value="other">Other</option>
+        </select>
+        <input name="nationality" placeholder="NAT">
+        <input name="reason" placeholder="Reason" style="grid-column:1/-1">
+        <label style="grid-column:1/-1">Reference photo (optional)</label>
+        <div class="drop-zone drop-sm" id="dropWatch" tabindex="0" style="grid-column:1/-1">
+          <input type="file" name="photo" accept="image/*" id="inputWatch" class="drop-input">
+          <div class="drop-content">
+            <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/></svg>
+            <span class="drop-label">Drag &amp; drop or <em>browse</em></span>
+            <small class="drop-hint">Reference photo of the person</small>
+          </div>
+          <div class="drop-preview" id="previewWatch" hidden>
+            <img id="thumbWatch" alt="preview">
+            <button type="button" class="drop-clear" onclick="clearFile('Watch')">&times;</button>
+            <span class="drop-name" id="nameWatch"></span>
+          </div>
+        </div>
+        <button style="grid-column:1/-1">Add to watchlist</button>
+      </form>
+      <table>
+        <tr><th>Photo</th><th>Name</th><th>Type</th><th>Doc №</th><th>Reason</th><th></th></tr>
+        {% for w in entries %}
+        <tr>
+          <td>
+            {% if w.photo %}
+              <img src="{{ w.photo.url }}" alt="ref"
+                   style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td>{{ w.full_name }}</td>
+          <td><small class="muted">{{ w.get_doc_type_display|default:"—" }}</small></td>
+          <td class="mono">{{ w.doc_number|default:"—" }}</td>
+          <td><small class="muted">{{ w.reason }}</small></td>
+          <td><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete">
+            <input type="hidden" name="entry_id" value="{{ w.pk }}">
+            <button class="ghost">Remove</button></form></td>
+        </tr>
+        {% empty %}<tr><td colspan="6"><small class="muted">Empty.</small></td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+  <div>
+    <h2>Lost / stolen / expired documents</h2>
+    <div class="panel">
+      <form method="post" action="{% url 'screening:blacklist_add' %}"
+            enctype="multipart/form-data"
+            style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        {% csrf_token %}
+        <input name="doc_number" placeholder="DOC NUMBER" required>
+        <select name="doc_type">
+          <option value="">Document type…</option>
+          <option value="passport">Passport</option>
+          <option value="visa">Visa</option>
+          <option value="id_card">National ID / Aadhaar</option>
+          <option value="driving_license">Driving Licence</option>
+          <option value="permit">Permit</option>
+          <option value="other">Other</option>
+        </select>
+        <input name="reason" placeholder="Reason" style="grid-column:1/-1">
+        <label style="grid-column:1/-1">Document photo (optional)</label>
+        <div class="drop-zone drop-sm" id="dropBlack" tabindex="0" style="grid-column:1/-1">
+          <input type="file" name="photo" accept="image/*" id="inputBlack" class="drop-input">
+          <div class="drop-content">
+            <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4m0 0L8 8m4-4l4 4"/><path d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
+            <span class="drop-label">Drag &amp; drop or <em>browse</em></span>
+            <small class="drop-hint">Photo of the lost / stolen document</small>
+          </div>
+          <div class="drop-preview" id="previewBlack" hidden>
+            <img id="thumbBlack" alt="preview">
+            <button type="button" class="drop-clear" onclick="clearFile('Black')">&times;</button>
+            <span class="drop-name" id="nameBlack"></span>
+          </div>
+        </div>
+        <button style="grid-column:1/-1">Blacklist document</button>
+      </form>
+      <table>
+        <tr><th>Photo</th><th>Doc №</th><th>Type</th><th>Reason</th><th></th></tr>
+        {% for b in blacklist %}
+        <tr>
+          <td>
+            {% if b.photo %}
+              <img src="{{ b.photo.url }}" alt="doc"
+                   style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td class="mono">{{ b.doc_number }}</td>
+          <td><small class="muted">{{ b.get_doc_type_display|default:"—" }}</small></td>
+          <td><small class="muted">{{ b.reason }}</small></td>
+          <td><form method="post" action="{% url 'screening:blacklist_delete' %}">{% csrf_token %}
+            <input type="hidden" name="entry_id" value="{{ b.pk }}">
+            <button class="ghost">Remove</button></form></td>
+        </tr>
+        {% empty %}<tr><td colspan="5"><small class="muted">Empty.</small></td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Reusable drop-zone (shared with the Screen document page) */
+function setupDrop(suffix) {
+  var zone = document.getElementById('drop' + suffix);
+  var input = document.getElementById('input' + suffix);
+  zone.addEventListener('click', function(e) {
+    if (e.target.closest('.drop-clear')) return;
+    input.click();
+  });
+  zone.addEventListener('keydown', function(e) { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); input.click(); } });
+  ['dragenter','dragover'].forEach(function(ev) {
+    zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
+  });
+  ['dragleave','drop'].forEach(function(ev) {
+    zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.remove('drag-over'); });
+  });
+  zone.addEventListener('drop', function(e) {
+    if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; showPreview(suffix); }
+  });
+  input.addEventListener('change', function() { showPreview(suffix); });
+}
+function showPreview(suffix) {
+  var input = document.getElementById('input' + suffix);
+  var preview = document.getElementById('preview' + suffix);
+  var thumb = document.getElementById('thumb' + suffix);
+  var nameEl = document.getElementById('name' + suffix);
+  var content = document.getElementById('drop' + suffix).querySelector('.drop-content');
+  if (input.files && input.files[0]) {
+    nameEl.textContent = input.files[0].name;
+    var reader = new FileReader();
+    reader.onload = function(e) { thumb.src = e.target.result; };
+    reader.readAsDataURL(input.files[0]);
+    content.hidden = true;
+    preview.hidden = false;
+  }
+}
+function clearFile(suffix) {
+  document.getElementById('input' + suffix).value = '';
+  document.getElementById('preview' + suffix).hidden = true;
+  document.getElementById('drop' + suffix).querySelector('.drop-content').hidden = false;
+}
+setupDrop('Watch');
+setupDrop('Black');
+</script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "screening/base.html" %}
+{% block content %}
+<h1>Operations dashboard</h1>
+<div class="cards">
+  <div class="card"><div class="num">{{ stats.total }}</div><div class="lbl">Documents screened</div></div>
+  <div class="card low"><div class="num">{{ stats.levels.LOW|default:0 }}</div><div class="lbl">Low risk</div></div>
+  <div class="card medium"><div class="num">{{ stats.levels.MEDIUM|default:0 }}</div><div class="lbl">Medium risk</div></div>
+  <div class="card high"><div class="num">{{ stats.levels.HIGH|default:0 }}</div><div class="lbl">High risk</div></div>
+  <div class="card"><div class="num">{{ stats.avg_ms }} ms</div><div class="lbl">Avg processing</div></div>
+  <div class="card"><div class="num">{{ stats.watchlist }} / {{ stats.blacklist }}</div><div class="lbl">Watchlist / blacklist</div></div>
+</div>
+
+<h2>Document mix</h2>
+<div class="panel">
+  {% for t, n in stats.types.items %}
+    <div class="detrow"><span>{{ t }}</span><span>{{ n }}</span></div>
+  {% empty %}<small class="muted">No screenings yet — use “Screen document”.</small>{% endfor %}
+</div>
+
+<h2>Recent screenings</h2>
+<table>
+  <tr><th>#</th><th>When</th><th>Type</th><th>Holder</th><th>Doc №</th><th>Risk</th><th>Level</th><th>Status</th></tr>
+  {% for r in recent %}
+  <tr>
+    <td><a href="{% url 'screening:record' r.pk %}">#{{ r.pk }}</a></td>
+    <td>{{ r.created_at|date:"d M H:i" }}</td>
+    <td>{{ r.doc_type }}</td>
+    <td>{{ r.holder_name|default:"—" }}</td>
+    <td class="mono">{{ r.doc_number|default:"—" }}</td>
+    <td>{{ r.risk_score }}</td>
+    <td><span class="badge {{ r.risk_level }}">{{ r.risk_level }}</span></td>
+    <td>{{ r.status }}</td>
+  </tr>
+  {% empty %}<tr><td colspan="8"><small class="muted">No records yet.</small></td></tr>{% endfor %}
+</table>
+{% endblock %}

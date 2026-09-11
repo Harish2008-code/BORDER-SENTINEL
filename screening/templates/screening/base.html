@@ -1,0 +1,30 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BORDER SENTINEL — AI Document Screening</title>
+<link rel="stylesheet" href="{% static 'screening/main.css' %}">
+</head>
+<body>
+<header class="top">
+  <div class="logo">BORDER<span>SENTINEL</span></div>
+  <nav class="main">
+    {% with url_name=request.resolver_match.url_name %}
+    <a href="{% url 'screening:dashboard' %}" class="{% if url_name == 'dashboard' %}active{% endif %}">Dashboard</a>
+    <a href="{% url 'screening:upload' %}" class="{% if url_name == 'upload' %}active{% endif %}">Screen document</a>
+    <a href="{% url 'screening:records' %}" class="{% if url_name == 'records' or url_name == 'record' %}active{% endif %}">Records</a>
+    <a href="{% url 'screening:watchlist' %}" class="{% if url_name == 'watchlist' %}active{% endif %}">Watchlists</a>
+    {% endwith %}
+  </nav>
+  <small style="margin-left:auto;color:var(--muted)">AI-Based Fake Identity &amp; Document Screening</small>
+</header>
+<main>
+{% if messages %}{% for m in messages %}
+  <div class="msg {{ m.tags }}">{{ m }}</div>
+{% endfor %}{% endif %}
+{% block content %}{% endblock %}
+</main>
+<footer>Demo environment — synthetic documents &amp; AI-generated portraits only.</footer>
+</body>
+</html>
